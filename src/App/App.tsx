@@ -5,17 +5,25 @@ import { ChartData } from "../Chart/ChartCanvasBuilder";
 
 const data: ChartData = [
     [0, 0],
-    [200, 200],
+    [200, 100],
     [400, 100],
-    [600, 300],
-    [800, 50]
+    [600, 200],
+    [800, 80],
+    [1000, 120],
+    [1200, 0]
 ];
 
 export const App: React.FC = () => {
     return (
         <div className="container">
             <div className="card">
-                <Chart width={600} height={200} data={data} />
+                <Chart
+                    width={600}
+                    height={200}
+                    rowsCount={5}
+                    padding={40}
+                    data={data}
+                />
             </div>
         </div>
     );

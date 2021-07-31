@@ -3,17 +3,13 @@ import { ChartBuilderProps, ChartCanvasBuilder } from "./ChartCanvasBuilder";
 
 type Props = ChartBuilderProps;
 
-export const Chart: React.FC<Props> = ({ width, height, data }) => {
+export const Chart: React.FC<Props> = (props) => {
     const ref = useRef<HTMLCanvasElement>(null);
 
     useEffect(() => {
         if (ref.current !== null) {
-            const builder = new ChartCanvasBuilder(ref.current, {
-                width,
-                height,
-                data
-            });
-            builder.buildChart();
+            const builder = new ChartCanvasBuilder(ref.current, props);
+            builder.buildRows().buildChart();
         }
     }, []);
 
