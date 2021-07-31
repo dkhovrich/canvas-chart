@@ -1,0 +1,43 @@
+{
+  "name": "canvas-chart",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "webpack serve",
+    "build": "webpack"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dkhovrich/canvas-chart.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/dkhovrich/canvas-chart/issues"
+  },
+  "homepage": "https://github.com/dkhovrich/canvas-chart#readme",
+  "devDependencies": {
+    "clean-webpack-plugin": "^4.0.0-alpha.0",
+    "css-loader": "^6.2.0",
+    "fork-ts-checker-webpack-plugin": "^6.2.13",
+    "html-webpack-plugin": "^5.3.2",
+    "mini-css-extract-plugin": "^2.1.0",
+    "prettier": "^2.2.1",
+    "style-loader": "^3.2.1",
+    "ts-loader": "^9.2.4",
+    "webpack": "^5.2.0",
+    "webpack-cli": "^4.1.0",
+    "webpack-dev-server": "^3.11.0"
+  },
+  "dependencies": {
+    "typescript": "^4.3.5"
+  },
+  "prettier": {
+    "trailingComma": "none",
+    "tabWidth": 4,
+    "semi": true,
+    "singleQuote": false
+  }
+}
