@@ -1,5 +1,5 @@
 import { ChartData, isColumnType } from "../data";
-import { assert, assertIsDefined, assertIsNumber, isDefined } from "../utils";
+import { assert, isDefined, isNumber } from "../utils";
 import { BaseCanvasBuilder, Coordinate } from "./BaseCanvasBuilder";
 
 export type ChartBuilderProps = {
@@ -14,38 +14,15 @@ function computeBoundaries({
     columns,
     types
 }: ChartData): readonly [min: number, max: number] {
-    let min: number | undefined, max: number | undefined;
+    const yCoordinates = columns
+        .filter((column) => {
+            const type = column[0]!;
+            assert(isColumnType(type));
+            return types[type] === "line";
+        })
+        .flatMap((column) => column.filter(isNumber));
 
-    for (const column of columns) {
-        const type = column[0]!;
-        assert(isColumnType(type));
-
-        if (types[type] !== "line") {
-            continue;
-        }
-
-        const value = column[1];
-        assertIsNumber(value);
-
-        if (min === undefined) min = value;
-        if (max === undefined) max = value;
-
-        if (min > value) min = value;
-        if (max < value) max = value;
-
-        for (let i = 2; i < column.length; i++) {
-            const value = column[i];
-            assertIsNumber(value);
-
-            if (min > value) min = value;
-            if (max < value) max = value;
-        }
-    }
-
-    assertIsDefined(min);
-    assertIsDefined(max);
-
-    return [min, max];
+    return [Math.min(...yCoordinates), Math.max(...yCoordinates)];
 }
 
 export class ChartCanvasBuilder extends BaseCanvasBuilder {
