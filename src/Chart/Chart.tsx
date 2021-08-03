@@ -9,7 +9,7 @@ export const Chart: React.FC<Props> = (props) => {
     useEffect(() => {
         if (ref.current !== null) {
             const builder = new ChartCanvasBuilder(ref.current, props);
-            builder.buildRows().buildChart();
+            builder.buildYAxis().buildXAxis().buildChart();
         }
     }, []);
 

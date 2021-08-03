@@ -1,5 +1,7 @@
 export type ChartData = ReturnType<typeof getChartData>;
 
+export type ColumnItem = string | number;
+
 const columnTypes = ["y0", "y1", "x"] as const;
 
 export type ColumnType = typeof columnTypes[number];

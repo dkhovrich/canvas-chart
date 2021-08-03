@@ -1,5 +1,6 @@
-import { ChartData, isColumnType } from "../data";
-import { assert, isDefined, isNumber } from "../utils";
+import { format } from "date-fns";
+import { ChartData, ColumnItem, isColumnType } from "../data";
+import { assert, isDefined, isNumber, isString } from "../utils";
 import { BaseCanvasBuilder, Coordinate } from "./BaseCanvasBuilder";
 
 export type ChartBuilderProps = {
@@ -34,7 +35,8 @@ export class ChartCanvasBuilder extends BaseCanvasBuilder {
     private readonly yMin: number;
     private readonly yMax: number;
     private readonly yRatio: number;
-    private readonly xRadio: number;
+    private readonly xRatio: number;
+    private readonly xColumnsCount: number = 6;
 
     constructor(canvas: HTMLCanvasElement, props: ChartBuilderProps) {
         super(canvas, props.width, props.height);
@@ -49,10 +51,10 @@ export class ChartCanvasBuilder extends BaseCanvasBuilder {
         this.yMin = yMin;
         this.yMax = yMax;
         this.yRatio = this.viewHeight / (this.yMax - this.yMin);
-        this.xRadio = this.viewWidth / (this.data.columns[0]!.length - 2);
+        this.xRatio = this.viewWidth / (this.data.columns[0]!.length - 2);
     }
 
-    public buildRows(): ChartCanvasBuilder {
+    public buildYAxis(): ChartCanvasBuilder {
         const step = this.viewHeight / this.rowsCount;
         const textStep = (this.yMax - this.yMin) / this.rowsCount;
 
@@ -76,41 +78,59 @@ export class ChartCanvasBuilder extends BaseCanvasBuilder {
         return this;
     }
 
-    public buildChart(): ChartCanvasBuilder {
-        for (const column of this.data.columns) {
+    public buildXAxis(): ChartCanvasBuilder {
+        const xData = this.data.columns.filter((column) => {
             const name = column[0];
             assert(isColumnType(name));
 
-            if (this.data.types[name] !== "line") {
-                continue;
-            }
+            return this.data.types[name] !== "line";
+        })[0];
+        assert(isDefined(xData));
 
-            const coords = column
-                .map((y, i): Coordinate | undefined => {
-                    if (typeof y !== "number") {
-                        return undefined;
-                    }
-                    return [
-                        this.calculateXCoordinate(i - 1),
-                        this.calculateYCoordinate(y)
-                    ];
-                })
-                .filter(isDefined);
+        const step = Math.round(xData.length / this.xColumnsCount);
 
-            assert(name !== "x");
-            const color = this.data.colors[name];
+        this.ctx.beginPath();
+        for (let i = 1; i < xData.length; i += step) {
+            const value = xData[i];
+            assert(isNumber(value));
 
-            this.line(coords, { color });
+            const text = format(new Date(value), "LLL d");
+            const x = i * this.xRatio;
+            this.ctx.fillText(text.toString(), x, this.dpiHeight - 10);
         }
+        this.ctx.closePath();
 
         return this;
     }
 
-    private calculateXCoordinate(x: number): number {
-        return Math.floor(x * this.xRadio);
+    public buildChart(): ChartCanvasBuilder {
+        const yData = this.data.columns.filter((column) => {
+            const name = column[0];
+            assert(isColumnType(name));
+
+            return this.data.types[name] === "line";
+        });
+
+        yData.map(this.toCoords.bind(this)).forEach((coords, index) => {
+            const columnName = yData[index]![0]!;
+            assert(isColumnType(columnName));
+            assert(columnName !== "x");
+
+            this.line(coords, { color: this.data.colors[columnName]! });
+        });
+
+        return this;
     }
 
-    private calculateYCoordinate(y: number): number {
-        return Math.floor(this.dpiHeight - this.padding - y * this.yRatio);
+    private toCoords(column: readonly ColumnItem[]): readonly Coordinate[] {
+        return column
+            .map((y, i): Coordinate | undefined => {
+                if (isString(y)) return undefined;
+                return [
+                    Math.floor((i - 1) * this.xRatio),
+                    Math.floor(this.dpiHeight - this.padding - y * this.yRatio)
+                ];
+            })
+            .filter(isDefined);
     }
 }
