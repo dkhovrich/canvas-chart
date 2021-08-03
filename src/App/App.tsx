@@ -1,17 +1,9 @@
 import React from "react";
 import "./App.css";
 import { Chart } from "../Chart/Chart";
-import { ChartData } from "../Chart/ChartCanvasBuilder";
+import { getChartData } from "../data";
 
-const data: ChartData = [
-    [0, 0],
-    [200, 100],
-    [400, 100],
-    [600, 200],
-    [800, 80],
-    [1000, 120],
-    [1200, 0]
-];
+const data = getChartData();
 
 export const App: React.FC = () => {
     return (

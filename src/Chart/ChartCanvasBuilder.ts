@@ -1,6 +1,6 @@
-export type Coordinate = readonly [x: number, y: number];
-
-export type ChartData = readonly Coordinate[];
+import { ChartData, isColumnType } from "../data";
+import { assert, assertIsDefined, assertIsNumber, isDefined } from "../utils";
+import { BaseCanvasBuilder, Coordinate } from "./BaseCanvasBuilder";
 
 export type ChartBuilderProps = {
     readonly width: number;
@@ -10,80 +10,130 @@ export type ChartBuilderProps = {
     readonly data: ChartData;
 };
 
-export class ChartCanvasBuilder {
-    private readonly ctx: CanvasRenderingContext2D;
+function computeBoundaries({
+    columns,
+    types
+}: ChartData): readonly [min: number, max: number] {
+    let min: number | undefined, max: number | undefined;
+
+    for (const column of columns) {
+        const type = column[0]!;
+        assert(isColumnType(type));
+
+        if (types[type] !== "line") {
+            continue;
+        }
+
+        const value = column[1];
+        assertIsNumber(value);
+
+        if (min === undefined) min = value;
+        if (max === undefined) max = value;
+
+        if (min > value) min = value;
+        if (max < value) max = value;
+
+        for (let i = 2; i < column.length; i++) {
+            const value = column[i];
+            assertIsNumber(value);
+
+            if (min > value) min = value;
+            if (max < value) max = value;
+        }
+    }
+
+    assertIsDefined(min);
+    assertIsDefined(max);
+
+    return [min, max];
+}
+
+export class ChartCanvasBuilder extends BaseCanvasBuilder {
     private readonly data: ChartData;
-    private readonly dpiWidth: number;
-    private readonly dpiHeight: number;
     private readonly rowsCount: number;
     private readonly padding: number;
     private readonly viewHeight: number;
+    private readonly viewWidth: number;
     private readonly yMin: number;
     private readonly yMax: number;
     private readonly yRatio: number;
+    private readonly xRadio: number;
 
-    constructor(
-        private readonly canvas: HTMLCanvasElement,
-        props: ChartBuilderProps
-    ) {
-        this.ctx = this.canvas.getContext("2d")!;
+    constructor(canvas: HTMLCanvasElement, props: ChartBuilderProps) {
+        super(canvas, props.width, props.height);
 
         this.data = props.data;
         this.rowsCount = props.rowsCount;
         this.padding = props.padding;
-        this.dpiWidth = props.width * 2;
-        this.dpiHeight = props.height * 2;
         this.viewHeight = this.dpiHeight - this.padding * 2;
-        this.yMin = Math.min(...props.data.map(([, y]) => y));
-        this.yMax = Math.max(...props.data.map(([, y]) => y));
-        this.yRatio = this.viewHeight / (this.yMax - this.yMin);
+        this.viewWidth = this.dpiWidth;
 
-        this.canvas.style.width = props.width + "px";
-        this.canvas.style.height = props.height + "px";
-        this.canvas.width = this.dpiWidth;
-        this.canvas.height = this.dpiHeight;
+        const [yMin, yMax] = computeBoundaries(props.data);
+        this.yMin = yMin;
+        this.yMax = yMax;
+        this.yRatio = this.viewHeight / (this.yMax - this.yMin);
+        this.xRadio = this.viewWidth / (this.data.columns[0]!.length - 2);
     }
 
     public buildRows(): ChartCanvasBuilder {
-        const { ctx } = this;
-
         const step = this.viewHeight / this.rowsCount;
         const textStep = (this.yMax - this.yMin) / this.rowsCount;
 
-        ctx.beginPath();
-        ctx.strokeStyle = "#bbb";
-        ctx.font = "normal 20px Helvetica,sans-serif";
-        ctx.fillStyle = "#96a2aa";
+        this.ctx.beginPath();
+        this.ctx.strokeStyle = "#bbb";
+        this.ctx.font = "normal 20px Helvetica,sans-serif";
+        this.ctx.fillStyle = "#96a2aa";
 
         for (let i = 1; i <= this.rowsCount; i++) {
             const y = step * i;
-            const text = this.yMax - textStep * i;
+            const text = Math.round(this.yMax - textStep * i);
 
-            ctx.fillText(text.toString(), 5, y + this.padding - 10);
-            ctx.moveTo(0, y + this.padding);
-            ctx.lineTo(this.dpiWidth, y + this.padding);
+            this.ctx.fillText(text.toString(), 5, y + this.padding - 10);
+            this.ctx.moveTo(0, y + this.padding);
+            this.ctx.lineTo(this.dpiWidth, y + this.padding);
         }
 
-        ctx.stroke();
-        ctx.closePath();
+        this.ctx.stroke();
+        this.ctx.closePath();
 
         return this;
     }
 
     public buildChart(): ChartCanvasBuilder {
-        const { ctx } = this;
+        for (const column of this.data.columns) {
+            const name = column[0];
+            assert(isColumnType(name));
 
-        ctx.beginPath();
-        ctx.lineWidth = 4;
-        ctx.strokeStyle = "#ff0000";
+            if (this.data.types[name] !== "line") {
+                continue;
+            }
 
-        for (const [x, y] of this.data) {
-            ctx.lineTo(x, this.dpiHeight - this.padding - y * this.yRatio);
+            const coords = column
+                .map((y, i): Coordinate | undefined => {
+                    if (typeof y !== "number") {
+                        return undefined;
+                    }
+                    return [
+                        this.calculateXCoordinate(i - 1),
+                        this.calculateYCoordinate(y)
+                    ];
+                })
+                .filter(isDefined);
+
+            assert(name !== "x");
+            const color = this.data.colors[name];
+
+            this.line(coords, { color });
         }
 
-        ctx.stroke();
-        ctx.closePath();
-
         return this;
+    }
+
+    private calculateXCoordinate(x: number): number {
+        return Math.floor(x * this.xRadio);
+    }
+
+    private calculateYCoordinate(y: number): number {
+        return Math.floor(this.dpiHeight - this.padding - y * this.yRatio);
     }
 }
